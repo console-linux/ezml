@@ -8,7 +8,7 @@ Original file is located at
 """
 
 import pandas as pd
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Any
 import numpy as np
 def map_unique_strings(df: pd.DataFrame,
                        columns: Union[str, List[str]] = 'all',
@@ -263,10 +263,11 @@ def preprocess_train_test(train_df, test_df):
 def solve(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
   train_df = pd.read_csv(train_df_filepath)
   test_df = pd.read_csv(test_df_filepath)
+  test_df = test_df.loc[:, x_cols]
   train, test = preprocess_train_test(train_df, test_df)
+  x_test = test.to_numpy()
   x_train = train.loc[:, x_cols].to_numpy()
   y_train = train[y_col].to_numpy()
-  x_test = test.loc[:, x_cols].to_numpy()
   model.fit(x_train, y_train)
   preds = np.array(model.predict(x_test))
   ids = test[id_test_col_name].to_numpy()
