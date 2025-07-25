@@ -166,6 +166,7 @@ def nans_look(df):
 
   # specifying a threshold value
   plt.axvline(0.4, color='r')
+  plt.show()  # Added to actually display the plot
 
 def preprocess_df(df, mapping=False):
   if mapping==False:
@@ -252,5 +253,25 @@ def decode(
 
 def corr_matrix(df):
   corr = df.corr()
-  corr.style.background_gradient(cmap='coolwarm')
+  return corr.style.background_gradient(cmap='coolwarm')
+
+def preprocess_train_test(train_df, test_df):
+  train, maps = preprocess_df(train_df, mapping=True)
+  test = encode(test_df, maps)
+  return train, test
+
+def solve(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
+  train_df = pd.read_csv(train_df_filepath)
+  test_df = pd.read_csv(test_df_filepath)
+  train, test = preprocess_train_test(train_df, test_df)
+  x_train = train.loc[:, x_cols].to_numpy()
+  y_train = train[y_col].to_numpy()
+  x_test = test.loc[:, x_cols].to_numpy()
+  model.fit(x_train, y_train)
+  preds = np.array(model.predict(x_test))
+  ids = test[id_test_col_name].to_numpy()
+  submission = pd.DataFrame({id_submission_col_name:ids,
+                             pred_col_name:preds})
+  submission.to_csv(submission_path, index=False)
+  return submission
 
