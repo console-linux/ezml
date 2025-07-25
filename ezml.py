@@ -260,7 +260,7 @@ def preprocess_train_test(train_df, test_df):
   test = encode(test_df, maps)
   return train, test
 
-def solve(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
+def solve_bad(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
   train_df = pd.read_csv(train_df_filepath)
   test_df = pd.read_csv(test_df_filepath)
   test_df = test_df.loc[:, x_cols]
@@ -275,4 +275,35 @@ def solve(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', tes
                              pred_col_name:preds})
   submission.to_csv(submission_path, index=False)
   return submission
+def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
+    # Load data
+    train_df = pd.read_csv(train_df_filepath)
+    test_df = pd.read_csv(test_df_filepath)
 
+    # Preprocess both datasets together to ensure consistent encoding
+    combined = pd.concat([train_df[x_cols + [y_col]], test_df[x_cols]], axis=0)
+    combined_processed, mappings = preprocess_df(combined, mapping=True)
+
+    # Split back into train and test
+    train_processed = combined_processed.iloc[:len(train_df)]
+    test_processed = combined_processed.iloc[len(train_df):]
+
+    # Prepare data for model
+    x_train = train_processed[x_cols].to_numpy()
+    y_train = train_df[y_col].to_numpy()  # Use original y values
+
+    # Train model
+    model.fit(x_train, y_train)
+
+    # Make predictions
+    x_test = test_processed[x_cols].to_numpy()
+    preds = np.array(model.predict(x_test))
+
+    # Create submission
+    ids = test_df[id_test_col_name].to_numpy()
+    submission = pd.DataFrame({
+        id_submission_col_name: ids,
+        pred_col_name: preds
+    })
+    submission.to_csv(submission_path, index=False)
+    return submission
