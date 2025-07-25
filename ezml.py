@@ -347,6 +347,14 @@ def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', te
     x_test = test_processed[x_cols].to_numpy()
     preds = np.array(model.predict(x_test))
 
+    if IsBool:
+        # Check if this is binary classification (only 0/1 in predictions)
+        unique_preds = np.unique(preds)
+        if set(unique_preds).issubset({0, 1}):
+            preds = preds.astype(bool)
+        else:
+            print("Warning: IsBool=True but predictions aren't binary (0/1). Returning numeric values.")
+
     # Create submission
     ids = test_df[id_test_col_name].to_numpy()
     submission = pd.DataFrame({
