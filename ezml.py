@@ -212,6 +212,66 @@ def encode(
 
     return encoded_df
 
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+
+def remove_classification_anomalies(df, y, contamination=0.05, random_state=42):
+    """
+    Remove classification anomalies from a DataFrame based on the target variable.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Input DataFrame containing features and target variable
+    y : str
+        Name of the target variable column
+    contamination : float (default=0.05)
+        Expected proportion of anomalies in the data
+    random_state : int (default=42)
+        Random seed for reproducibility
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame with anomalies removed
+    """
+
+    # Make a copy of the original DataFrame to avoid modifying it
+    df_clean = df.copy()
+
+    # Separate features and target
+    X = df_clean.drop(columns=[y])
+    target = df_clean[y]
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Initialize and fit Isolation Forest for each class
+    classes = target.unique()
+    anomaly_mask = pd.Series(False, index=df_clean.index)
+
+    for class_label in classes:
+        # Get indices of current class
+        class_indices = target[target == class_label].index
+
+        # Fit Isolation Forest on this class's data
+        clf = IsolationForest(contamination=contamination,
+                            random_state=random_state)
+        clf.fit(X_scaled[class_indices])
+
+        # Predict anomalies for this class
+        class_pred = clf.predict(X_scaled[class_indices])
+
+        # Update anomaly mask (anomalies are marked as -1)
+        anomaly_mask.loc[class_indices] = (class_pred == -1)
+
+    # Remove rows marked as anomalies
+    df_clean = df_clean[~anomaly_mask]
+
+    return df_clean.reset_index(drop=True)
+
 def decode(
     encoded_df: pd.DataFrame,
     mappings: Dict[str, Dict[Any, Any]],
@@ -260,22 +320,9 @@ def preprocess_train_test(train_df, test_df):
   test = encode(test_df, maps)
   return train, test
 
-def solve_bad(model, x_cols, y_col, pred_col_name,train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
-  train_df = pd.read_csv(train_df_filepath)
-  test_df = pd.read_csv(test_df_filepath)
-  test_df = test_df.loc[:, x_cols]
-  train, test = preprocess_train_test(train_df, test_df)
-  x_test = test.to_numpy()
-  x_train = train.loc[:, x_cols].to_numpy()
-  y_train = train[y_col].to_numpy()
-  model.fit(x_train, y_train)
-  preds = np.array(model.predict(x_test))
-  ids = test[id_test_col_name].to_numpy()
-  submission = pd.DataFrame({id_submission_col_name:ids,
-                             pred_col_name:preds})
-  submission.to_csv(submission_path, index=False)
-  return submission
-def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id', id_submission_col_name='id'):
+
+def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id',
+          id_submission_col_name='id', contamination=0.05):
     # Load data
     train_df = pd.read_csv(train_df_filepath)
     test_df = pd.read_csv(test_df_filepath)
@@ -288,9 +335,10 @@ def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', te
     train_processed = combined_processed.iloc[:len(train_df)]
     test_processed = combined_processed.iloc[len(train_df):]
 
-    # Prepare data for model
-    x_train = train_processed[x_cols].to_numpy()
-    y_train = train_df[y_col].to_numpy()  # Use original y values
+    # Remove anomalies and get matching y values
+    train_cleaned = remove_classification_anomalies(train_processed, y_col, contamination=contamination)
+    y_train = train_cleaned[y_col].to_numpy()  # Use the y values from cleaned data
+    x_train = train_cleaned[x_cols].to_numpy()
 
     # Train model
     model.fit(x_train, y_train)
