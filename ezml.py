@@ -322,7 +322,7 @@ def preprocess_train_test(train_df, test_df):
 
 
 def solve(model, x_cols, y_col, pred_col_name, train_df_filepath='train.csv', test_df_filepath='test.csv', submission_path='Submission.csv', id_test_col_name='id',
-          id_submission_col_name='id', contamination=0.05):
+          id_submission_col_name='id', contamination=0.05, IsBool=False):
     # Load data
     train_df = pd.read_csv(train_df_filepath)
     test_df = pd.read_csv(test_df_filepath)
