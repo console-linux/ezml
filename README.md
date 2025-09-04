@@ -160,4 +160,4 @@ df_processed = handle_nans(df_processed)
 
 ## License
 
-This project is open source and available under the MIT License.
+This project has no license yet.
