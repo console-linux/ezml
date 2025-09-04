@@ -163,7 +163,7 @@ df_processed = handle_nans(df_processed)
 This project has no license yet.
 
 
-## Russian
+# Russian
 
 # EZML - Библиотека для упрощения предобработки данных и машинного обучения
 
@@ -327,4 +327,4 @@ df_processed = handle_nans(df_processed)
 
 ## Лицензия
 
-Этот проект является открытым и доступен по лицензии MIT.
+Этот проект пока не имеет лицензии.
